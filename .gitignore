@@ -1,0 +1,12 @@
+# Journaux : contiennent l'adresse de la montre et des notifications du téléphone
+*.log
+*logcat*.txt
+montre_log.txt
+bugreport*.zip
+
+# Réglages personnels des boutons (créé par l'interface)
+boutons.json
+
+__pycache__/
+*.pyc
+.venv/

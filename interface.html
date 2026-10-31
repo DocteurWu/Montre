@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ma montre</title>
+<style>
+  :root {
+    --bg: #f4f2ee; --card: #ffffff; --ink: #1d1b18; --muted: #6f6a62;
+    --line: #e2ddd5; --accent: #2f5bd3; --accent-ink: #fff; --ok: #1f7a4d; --err: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151413; --card: #1f1d1b; --ink: #ece8e1; --muted: #a29b90;
+      --line: #34312d; --accent: #7b9cff; --accent-ink: #0d1020; --ok: #5fc58f; --err: #ff8a80; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0; }
+  h2 { font-size: 15px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .wide { grid-column: 1 / -1; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--bg); color: var(--ink); font: inherit; }
+  textarea { min-height: 90px; resize: vertical; }
+  button { margin-top: 12px; padding: 10px 16px; border: 0; border-radius: 10px; cursor: pointer;
+    background: var(--accent); color: var(--accent-ink); font: inherit; font-weight: 600; }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: wait; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .count { font-size: 12px; color: var(--muted); text-align: right; }
+  .pill { font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); }
+  .pill.on { color: var(--ok); border-color: var(--ok); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat b { display: block; font-size: 20px; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .toggle { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .toggle:last-child { border-bottom: 0; }
+  .toggle .row button { margin: 0; padding: 6px 12px; }
+  .quick { display: flex; flex-wrap: wrap; gap: 8px; }
+  .quick button { margin: 0; }
+  ul { list-style: none; padding: 0; margin: 0; font-size: 13px; max-height: 220px; overflow: auto; }
+  li { padding: 6px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; }
+  li time { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .err { color: var(--err); }
+  .btnrow { display: grid; grid-template-columns: 110px 150px 1fr; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  @media (max-width: 600px) { .btnrow { grid-template-columns: 1fr 1fr; } .btnrow input { grid-column: 1 / -1; } }
+  select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); font: inherit; }
+  .flash { animation: flash .8s; }
+  @keyframes flash { from { background: var(--accent); color: var(--accent-ink); } }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); padding: 10px 16px;
+    border-radius: 10px; background: var(--ink); color: var(--bg); opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>⌚ Ma montre — ID205L</h1>
+    <span id="conn" class="pill">…</span>
+  </header>
+
+  <div class="grid">
+    <section class="card wide">
+      <h2>Envoyer un message</h2>
+      <label for="title">Titre</label>
+      <input id="title" maxlength="30" value="PC">
+      <label for="text">Texte</label>
+      <textarea id="text" maxlength="150" placeholder="Ce que tu veux voir sur la montre"></textarea>
+      <div class="count"><span id="n">0</span>/150</div>
+      <div class="row">
+        <button id="send">Envoyer</button>
+        <label style="margin:12px 0 0"><input type="checkbox" id="plain" checked style="width:auto"> retirer les accents</label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Messages rapides</h2>
+      <div class="quick" id="quick"></div>
+    </section>
+
+    <section class="card">
+      <h2>Faux appel</h2>
+      <label for="cname">Nom affiché</label>
+      <input id="cname" maxlength="30" value="Oui ou non ?">
+      <label for="cnum">Numéro</label>
+      <input id="cnum" maxlength="20" value="">
+      <div class="row">
+        <button id="call">Appeler</button>
+        <button id="hang" class="ghost">Raccrocher</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>État</h2>
+      <div class="stats">
+        <div class="stat"><b id="bat">–</b><span>batterie</span></div>
+        <div class="stat"><b id="fw">–</b><span>firmware</span></div>
+        <div class="stat"><b id="clock">–</b><span>heure montre</span></div>
+      </div>
+      <div class="row">
+        <button id="refresh" class="ghost">Actualiser</button>
+        <button id="time" class="ghost">Mettre à l'heure</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Réglages</h2>
+      <div id="settings"></div>
+    </section>
+
+    <section class="card wide">
+      <h2>Boutons de la montre</h2>
+      <p style="margin:0 0 8px;color:var(--muted);font-size:13px">
+        Sur la montre, ouvre l'écran <b>Musique</b> : ses 4 touches déclenchent les actions ci-dessous.
+      </p>
+      <div id="buttons"></div>
+      <div class="row">
+        <button id="saveButtons">Enregistrer</button>
+        <button id="musicMode" class="ghost">Réactiver l'écran musique</button>
+      </div>
+      <label>Derniers appuis</label>
+      <ul id="events" style="max-height:140px"></ul>
+    </section>
+
+    <section class="card wide">
+      <h2>Journal</h2>
+      <ul id="log"></ul>
+    </section>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const LABELS = {
+  rappel_assis: "Rappel « assis trop longtemps »", anti_perte: "Anti-perte", meteo: "Météo",
+  ne_pas_deranger: "Ne pas déranger (22h–7h)", lever_poignet: "Allumer en levant le poignet",
+  paysage: "Mode paysage", cardio_auto: "Cardio automatique",
+};
+const QUICK = [["PC", "Pause !"], ["PC", "Reunion dans 5 min"], ["PC", "Build termine"],
+               ["PC", "Appelle-moi"], ["PC", "Bois de l'eau"]];
+
+function toast(msg, bad) {
+  const t = $("toast"); t.textContent = msg; t.style.background = bad ? "var(--err)" : "";
+  t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+async function api(path, body, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch(path, body === undefined ? {} :
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error);
+    return j.result;
+  } catch (e) { toast("Erreur : " + e.message, true); throw e; }
+  finally { if (btn) btn.disabled = false; refreshLog(); }
+}
+
+async function sendMessage(title, text, btn) {
+  if (!text.trim()) return toast("Écris un texte", true);
+  await api("/api/message", { title, text, plain: $("plain").checked }, btn);
+  toast("Envoyé ✓");
+}
+
+$("text").addEventListener("input", () => $("n").textContent = $("text").value.length);
+$("send").onclick = () => sendMessage($("title").value, $("text").value, $("send"));
+$("text").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("send").click(); });
+$("call").onclick = async () => { await api("/api/call", { name: $("cname").value, number: $("cnum").value }, $("call")); toast("Appel affiché"); };
+$("hang").onclick = () => api("/api/end_call", {}, $("hang"));
+$("time").onclick = async () => { await api("/api/time", {}, $("time")); toast("Heure réglée"); refreshStatus(); };
+$("refresh").onclick = () => refreshStatus();
+
+QUICK.forEach(([t, x]) => {
+  const b = document.createElement("button"); b.className = "ghost"; b.textContent = x;
+  b.onclick = () => sendMessage(t, x, b); $("quick").appendChild(b);
+});
+
+async function refreshStatus() {
+  const s = await api("/api/status", undefined, $("refresh"));
+  $("bat").textContent = s.battery + " %"; $("fw").textContent = "v" + s.firmware;
+  $("clock").textContent = s.time.slice(11, 16);
+}
+
+async function refreshLog() {
+  const r = await fetch("/api/history").then((r) => r.json());
+  $("conn").textContent = r.connected ? "connectée" : "déconnectée";
+  $("conn").className = "pill" + (r.connected ? " on" : "");
+  $("log").innerHTML = "";
+  r.history.forEach(([t, what, res]) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<time>${t}</time><span></span>`;
+    li.querySelector("span").textContent = `${what} — ${res}`;
+    if (res !== "ok") li.querySelector("span").className = "err";
+    $("log").appendChild(li);
+  });
+  if (!$("settings").children.length) buildSettings(r.settings);
+  renderEvents(r.events || []);
+}
+
+const ACTION_TYPES = { rien: "Rien", heure: "Afficher l'heure", batterie: "Afficher la batterie",
+  message: "Afficher un message", commande: "Lancer une commande PC" };
+let BTN_NAMES = {}, lastEvent = "";
+
+function renderEvents(events) {
+  const ul = $("events"); ul.innerHTML = "";
+  events.forEach(([t, e], i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<time>${t}</time><span></span>`;
+    li.querySelector("span").textContent = BTN_NAMES[e] || e;
+    if (i === 0 && t + e !== lastEvent && lastEvent) li.classList.add("flash");
+    ul.appendChild(li);
+  });
+  if (events[0]) lastEvent = events[0][0] + events[0][1];
+}
+
+async function loadButtons() {
+  const r = await fetch("/api/buttons").then((r) => r.json());
+  BTN_NAMES = r.result.names;
+  const box = $("buttons"); box.innerHTML = "";
+  Object.entries(BTN_NAMES).forEach(([key, label]) => {
+    const a = r.result.actions[key] || { type: "rien", valeur: "" };
+    const row = document.createElement("div"); row.className = "btnrow"; row.dataset.key = key;
+    row.innerHTML = `<b></b><select></select><input placeholder="texte ou commande">`;
+    row.querySelector("b").textContent = label;
+    const sel = row.querySelector("select");
+    Object.entries(ACTION_TYPES).forEach(([v, l]) => sel.add(new Option(l, v, false, v === a.type)));
+    const inp = row.querySelector("input"); inp.value = a.valeur;
+    const sync = () => inp.style.visibility = ["message", "commande"].includes(sel.value) ? "visible" : "hidden";
+    sel.onchange = sync; sync();
+    box.appendChild(row);
+  });
+}
+
+$("saveButtons").onclick = async () => {
+  const body = {};
+  document.querySelectorAll(".btnrow").forEach((row) => {
+    body[row.dataset.key] = { type: row.querySelector("select").value, valeur: row.querySelector("input").value };
+  });
+  await api("/api/buttons", body, $("saveButtons")); toast("Boutons enregistrés");
+};
+$("musicMode").onclick = async () => { await api("/api/buttons_mode", {}, $("musicMode")); toast("Écran musique activé"); };
+loadButtons();
+
+function buildSettings(names) {
+  names.forEach((n) => {
+    const d = document.createElement("div"); d.className = "toggle";
+    d.innerHTML = `<span>${LABELS[n] || n}</span><div class="row"></div>`;
+    [["On", true], ["Off", false]].forEach(([lbl, on]) => {
+      const b = document.createElement("button"); b.className = "ghost"; b.textContent = lbl;
+      b.onclick = async () => { await api("/api/setting", { name: n, on }, b); toast(`${LABELS[n] || n} : ${lbl}`); };
+      d.querySelector(".row").appendChild(b);
+    });
+    $("settings").appendChild(d);
+  });
+}
+
+refreshLog();
+refreshStatus().catch(() => {});
+setInterval(refreshLog, 1500);
+</script>
+</body>
+</html>
